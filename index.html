@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Opening the shop…</title>
+<meta name="robots" content="noindex">
+<meta name="color-scheme" content="dark light">
+
+<!-- No-JavaScript fallback: send the visitor straight to the shop.
+     If you ever change the shop URL, update it here, in SHOP_URL below,
+     and in the two <a href> links in the body. -->
+<noscript><meta http-equiv="refresh" content="0; url=https://twotux.net"></noscript>
+
+<style>
+  /* ---- Easy customisation: change these colours ---- */
+  :root {
+    --bg: #0f0f10;
+    --card: #19191b;
+    --border: #2a2a2d;
+    --fg: #f5f5f6;
+    --muted: #a1a1a6;
+    --accent: #ffffff;      /* primary button background */
+    --accent-fg: #0f0f10;   /* primary button text */
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f6f7;
+      --card: #ffffff;
+      --border: #e3e3e6;
+      --fg: #111111;
+      --muted: #5f5f66;
+      --accent: #111111;
+      --accent-fg: #ffffff;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
+             max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  /* While a normal visitor is being redirected, keep the page blank (no flash). */
+  html.pending body { visibility: hidden; }
+
+  .card {
+    width: 100%;
+    max-width: 420px;
+    padding: 28px 22px;
+    text-align: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+  }
+
+  h1 { margin: 12px 0 6px; font-size: 1.35rem; line-height: 1.25; }
+  h2 { margin: 0 0 10px; font-size: 1rem; }
+  p  { margin: 0 0 16px; color: var(--muted); }
+
+  .spinner {
+    width: 28px; height: 28px; margin: 0 auto;
+    border: 3px solid var(--border);
+    border-top-color: var(--fg);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+
+  .btn {
+    display: block; width: 100%;
+    padding: 14px 16px;
+    border: 1px solid transparent; border-radius: 12px;
+    font: inherit; font-weight: 600; text-align: center; text-decoration: none;
+    cursor: pointer;
+  }
+  .btn.primary   { background: var(--accent); color: var(--accent-fg); }
+  .btn.secondary { background: transparent; color: var(--fg); border-color: var(--border); width: auto; padding: 10px 14px; flex: none; }
+  .btn:focus-visible, .link:focus-visible { outline: 3px solid #4c8dff; outline-offset: 2px; }
+
+  .fallback {
+    margin-top: 22px; padding-top: 20px;
+    border-top: 1px solid var(--border);
+    text-align: left;
+  }
+  .steps { margin: 0 0 16px; padding-left: 1.25em; color: var(--muted); }
+  .steps li { margin-bottom: 8px; }
+  .steps strong { color: var(--fg); }
+
+  .urlrow { display: flex; gap: 10px; align-items: center; }
+  .urlrow code {
+    flex: 1; min-width: 0;
+    padding: 10px 12px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    font-size: 0.9rem; overflow-wrap: anywhere;
+    -webkit-user-select: all; user-select: all;
+  }
+
+  .link { display: inline-block; margin-top: 18px; color: var(--muted); font-size: 0.9rem; }
+
+  pre#debug {
+    margin: 18px 0 0; padding: 12px; text-align: left;
+    background: var(--bg); border: 1px dashed var(--border); border-radius: 10px;
+    color: var(--muted); font-size: 0.75rem; white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+</style>
+
+<script>
+/* ------------------------------------------------------------------
+   STEP 1 — runs immediately (before the page paints).
+   Decides who gets the Safari hand-off and who is sent straight to
+   the shop. Normal visitors are redirected right here.
+------------------------------------------------------------------ */
+(function () {
+  var SHOP_URL = 'https://twotux.net';
+
+  var ua = navigator.userAgent || '';
+
+  // ?debug        -> never redirect; show a diagnostics box
+  // ?debug=ios    -> pretend to be iOS Instagram so you can preview the hand-off screen
+  var params = null;
+  try { params = new URLSearchParams(location.search); } catch (e) {}
+  var debug = (params && params.has('debug')) ? (params.get('debug') || 'on') : null;
+
+  var isInstagram = /Instagram/i.test(ua);
+  // iPadOS can report a "Macintosh" UA, so also check for touch support.
+  var isIOS = /iPhone|iPad|iPod/i.test(ua) ||
+              (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+
+  var showHandoff = (isInstagram && isIOS) || debug === 'ios';
+
+  window.TT = {
+    shopUrl: SHOP_URL,
+    safariUrl: 'x-safari-' + SHOP_URL,   // -> x-safari-https://twotux.net
+    ua: ua,
+    debug: debug,
+    isInstagram: isInstagram,
+    isIOS: isIOS,
+    showHandoff: showHandoff,
+    redirecting: false
+  };
+
+  // Android, desktop, iOS Safari/Chrome, other apps: go straight to the shop.
+  // location.replace() keeps this page out of the Back-button history.
+  if (!showHandoff && debug === null) {
+    window.TT.redirecting = true;
+    document.documentElement.className += ' pending';
+    location.replace(SHOP_URL);
+  }
+})();
+</script>
+</head>
+
+<body>
+
+<!-- Shown only to iOS Instagram visitors (or ?debug=ios) -->
+<main class="card" id="handoff" hidden>
+  <div class="spinner" id="spinner" aria-hidden="true"></div>
+  <h1 id="title">Opening in Safari…</h1>
+  <p id="status" role="status" aria-live="polite">
+    Hang tight — we're taking you to the shop in Safari for a smoother checkout.
+  </p>
+
+  <a class="btn primary" id="openBtn" href="x-safari-https://twotux.net">Open in Safari</a>
+
+  <section class="fallback" id="fallback" hidden>
+    <h2>Didn't switch? Open it manually:</h2>
+    <ol class="steps">
+      <li>Tap the <strong>•••</strong> menu in the top-right corner of this screen
+          (on some versions it's a <strong>compass</strong> icon at the bottom-right).</li>
+      <li>Choose <strong>Open in external browser</strong>
+          (or <strong>Open in Safari</strong>).</li>
+    </ol>
+    <p style="margin-bottom:10px">Or copy the link and paste it into Safari:</p>
+    <div class="urlrow">
+      <code id="urlText">https://twotux.net</code>
+      <button class="btn secondary" id="copyBtn" type="button">Copy link</button>
+    </div>
+  </section>
+
+  <a class="link" href="https://twotux.net">Continue in this browser instead</a>
+</main>
+
+<!-- Shown only if a normal redirect is somehow blocked, or in ?debug mode -->
+<main class="card" id="direct" hidden>
+  <h1>Taking you to the shop…</h1>
+  <p>If nothing happens, tap the button.</p>
+  <a class="btn primary" href="https://twotux.net">Go to the shop</a>
+</main>
+
+<pre id="debug" hidden></pre>
+
+<script>
+/* ------------------------------------------------------------------
+   STEP 2 — builds the on-screen UI once the page exists.
+------------------------------------------------------------------ */
+(function () {
+  var TT = window.TT;
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ---------- Normal visitors (redirect already fired in STEP 1) ---------- */
+  if (!TT.showHandoff) {
+    $('direct').hidden = false;
+    if (TT.debug === null) {
+      // Safety net: if the redirect was somehow blocked, reveal the manual button.
+      setTimeout(function () {
+        document.documentElement.className =
+          document.documentElement.className.replace('pending', '');
+      }, 2500);
+    } else {
+      renderDebug('Normal visitor: would be sent straight to the shop.');
+    }
+    return;
+  }
+
+  /* ---------- iOS Instagram visitors ---------- */
+  var timer = null;
+  var wasHidden = false;
+  var fallbackShown = false;
+
+  $('handoff').hidden = false;
+  $('openBtn').setAttribute('href', TT.safariUrl);
+  $('urlText').textContent = TT.shopUrl;
+
+  function showFallback() {
+    if (fallbackShown) return;
+    fallbackShown = true;
+    $('spinner').hidden = true;
+    $('title').textContent = 'Open this in Safari';
+    $('status').textContent =
+      "Instagram didn't let us switch automatically. It only takes a couple of taps:";
+    $('fallback').hidden = false;
+  }
+
+  // If the page is still on screen shortly after the attempt, assume it was blocked.
+  function armFallbackTimer() {
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      if (!document.hidden) showFallback();
+    }, 1800);
+  }
+
+  // Safari opening usually backgrounds Instagram -> page becomes hidden.
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      wasHidden = true;
+      clearTimeout(timer);
+    } else if (wasHidden) {
+      // They came back to Instagram: make sure the manual options are visible.
+      showFallback();
+    }
+  });
+  window.addEventListener('pagehide', function () { clearTimeout(timer); });
+
+  // Tapping the button is a real user gesture, so it's the most reliable attempt.
+  $('openBtn').addEventListener('click', armFallbackTimer);
+
+  // Automatic attempt shortly after load (skipped in debug mode).
+  if (TT.debug === null) {
+    setTimeout(function () {
+      armFallbackTimer();
+      window.location.href = TT.safariUrl;
+    }, 350);
+  } else {
+    showFallback();
+    renderDebug('Previewing the iOS Instagram hand-off screen (no automatic attempt).');
+  }
+
+  /* ---------- Copy link ---------- */
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px;';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  $('copyBtn').addEventListener('click', function () {
+    var btn = this;
+    function done(ok) {
+      btn.textContent = ok ? 'Copied ✓' : 'Press & hold the link';
+      setTimeout(function () { btn.textContent = 'Copy link'; }, 2500);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(TT.shopUrl).then(
+        function () { done(true); },
+        function () { done(legacyCopy(TT.shopUrl)); }
+      );
+    } else {
+      done(legacyCopy(TT.shopUrl));
+    }
+  });
+
+  /* ---------- Diagnostics (only with ?debug) ---------- */
+  function renderDebug(note) {
+    var el = $('debug');
+    el.hidden = false;
+    el.textContent =
+      'TEST MODE: ' + note + '\n\n' +
+      'isInstagram: ' + TT.isInstagram + '\n' +
+      'isIOS: ' + TT.isIOS + '\n' +
+      'debug: ' + TT.debug + '\n' +
+      'showHandoff: ' + TT.showHandoff + '\n\n' +
+      'userAgent:\n' + TT.ua;
+    // keep the debug box inside the layout on small screens
+    el.style.maxWidth = '420px';
+    el.style.width = '100%';
+  }
+})();
+</script>
+</body>
+</html>
