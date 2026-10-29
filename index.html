@@ -67,19 +67,19 @@
     border-radius: 20px;
   }
 
-  h1 { margin: 12px 0 6px; font-size: 1.35rem; line-height: 1.25; }
-  h2 { margin: 0 0 10px; font-size: 1rem; }
+  h1 { margin: 0 0 8px; font-size: 1.35rem; line-height: 1.25; }
   p  { margin: 0 0 16px; color: var(--muted); }
 
-  .spinner {
-    width: 28px; height: 28px; margin: 0 auto;
-    border: 3px solid var(--border);
-    border-top-color: var(--fg);
-    border-radius: 50%;
-    animation: spin 0.9s linear infinite;
+  /* Bouncing arrow that points up at Instagram's ••• button (top-right). */
+  .pointer {
+    position: fixed;
+    top: 6px;
+    right: 14px;
+    color: var(--fg);
+    animation: nudge 1.2s ease-in-out infinite;
   }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+  @keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+  @media (prefers-reduced-motion: reduce) { .pointer { animation: none; } }
 
   .btn {
     display: block; width: 100%;
@@ -87,21 +87,21 @@
     border: 1px solid transparent; border-radius: 12px;
     font: inherit; font-weight: 600; text-align: center; text-decoration: none;
     cursor: pointer;
+    -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none;
   }
   .btn.primary   { background: var(--accent); color: var(--accent-fg); }
   .btn.secondary { background: transparent; color: var(--fg); border-color: var(--border); width: auto; padding: 10px 14px; flex: none; }
   .btn:focus-visible, .link:focus-visible { outline: 3px solid #4c8dff; outline-offset: 2px; }
 
-  .fallback {
-    margin-top: 22px; padding-top: 20px;
-    border-top: 1px solid var(--border);
-    text-align: left;
+  .steps {
+    margin: 0 0 18px; padding-left: 1.4em;
+    text-align: left; font-size: 1.05rem; color: var(--fg);
   }
-  .steps { margin: 0 0 16px; padding-left: 1.25em; color: var(--muted); }
-  .steps li { margin-bottom: 8px; }
-  .steps strong { color: var(--fg); }
+  .steps li { margin-bottom: 10px; }
+  .note { font-size: 0.85rem; margin: -4px 0 18px; }
 
-  .urlrow { display: flex; gap: 10px; align-items: center; }
+  .urlrow { display: flex; gap: 10px; align-items: center; text-align: left; }
   .urlrow code {
     flex: 1; min-width: 0;
     padding: 10px 12px;
@@ -122,8 +122,8 @@
 <script>
 /* ------------------------------------------------------------------
    STEP 1 — runs immediately (before the page paints).
-   Decides who gets the Safari hand-off and who is sent straight to
-   the shop. Normal visitors are redirected right here.
+   Decides who gets the Safari hand-off screen and who is sent straight
+   to the shop. Normal visitors are redirected right here.
 ------------------------------------------------------------------ */
 (function () {
   var SHOP_URL = 'https://twotux.net';
@@ -168,29 +168,25 @@
 <body>
 
 <!-- Shown only to iOS Instagram visitors (or ?debug=ios) -->
+<svg class="pointer" id="pointer" viewBox="0 0 24 24" width="30" height="30" aria-hidden="true" hidden>
+  <path d="M12 3l8 9h-5v9h-6v-9H4z" fill="currentColor"/>
+</svg>
+
 <main class="card" id="handoff" hidden>
-  <div class="spinner" id="spinner" aria-hidden="true"></div>
-  <h1 id="title">Opening in Safari…</h1>
-  <p id="status" role="status" aria-live="polite">
-    Hang tight — we're taking you to the shop in Safari for a smoother checkout.
-  </p>
+  <h1>Open this in Safari</h1>
+  <p>Instagram's built-in browser can break checkout buttons. It only takes two taps to fix:</p>
 
-  <a class="btn primary" id="openBtn" href="x-safari-https://twotux.net">Open in Safari</a>
+  <ol class="steps">
+    <li>Tap the <strong>•••</strong> button at the top-right of the screen.</li>
+    <li>Choose <strong>Open in external browser</strong> (or <strong>Open in Safari</strong>).</li>
+  </ol>
+  <p class="note">On some Instagram versions the button is a compass icon at the bottom-right.</p>
 
-  <section class="fallback" id="fallback" hidden>
-    <h2>Didn't switch? Open it manually:</h2>
-    <ol class="steps">
-      <li>Tap the <strong>•••</strong> menu in the top-right corner of this screen
-          (on some versions it's a <strong>compass</strong> icon at the bottom-right).</li>
-      <li>Choose <strong>Open in external browser</strong>
-          (or <strong>Open in Safari</strong>).</li>
-    </ol>
-    <p style="margin-bottom:10px">Or copy the link and paste it into Safari:</p>
-    <div class="urlrow">
-      <code id="urlText">https://twotux.net</code>
-      <button class="btn secondary" id="copyBtn" type="button">Copy link</button>
-    </div>
-  </section>
+  <p style="margin-bottom:10px">Or copy the link and paste it into Safari:</p>
+  <div class="urlrow">
+    <code id="urlText">https://twotux.net</code>
+    <button class="btn secondary" id="copyBtn" type="button">Copy link</button>
+  </div>
 
   <a class="link" href="https://twotux.net">Continue in this browser instead</a>
 </main>
@@ -228,56 +224,18 @@
   }
 
   /* ---------- iOS Instagram visitors ---------- */
-  var timer = null;
-  var wasHidden = false;
-  var fallbackShown = false;
-
   $('handoff').hidden = false;
-  $('openBtn').setAttribute('href', TT.safariUrl);
+  $('pointer').removeAttribute('hidden');   // SVG elements have no .hidden property
   $('urlText').textContent = TT.shopUrl;
 
-  function showFallback() {
-    if (fallbackShown) return;
-    fallbackShown = true;
-    $('spinner').hidden = true;
-    $('title').textContent = 'Open this in Safari';
-    $('status').textContent =
-      "Instagram didn't let us switch automatically. It only takes a couple of taps:";
-    $('fallback').hidden = false;
-  }
-
-  // If the page is still on screen shortly after the attempt, assume it was blocked.
-  function armFallbackTimer() {
-    clearTimeout(timer);
-    timer = setTimeout(function () {
-      if (!document.hidden) showFallback();
-    }, 1800);
-  }
-
-  // Safari opening usually backgrounds Instagram -> page becomes hidden.
-  document.addEventListener('visibilitychange', function () {
-    if (document.hidden) {
-      wasHidden = true;
-      clearTimeout(timer);
-    } else if (wasHidden) {
-      // They came back to Instagram: make sure the manual options are visible.
-      showFallback();
-    }
-  });
-  window.addEventListener('pagehide', function () { clearTimeout(timer); });
-
-  // Tapping the button is a real user gesture, so it's the most reliable attempt.
-  $('openBtn').addEventListener('click', armFallbackTimer);
-
-  // Automatic attempt shortly after load (skipped in debug mode).
+  // Quiet, best-effort attempt to jump to Safari. On some Instagram/iOS versions
+  // this works; on others it does nothing and the instructions above stay on screen.
+  // (There is deliberately no "Open in Safari" button: on tested iPhones, tapping a
+  // x-safari link inside Instagram just reloads the shop in Instagram's own browser.)
   if (TT.debug === null) {
-    setTimeout(function () {
-      armFallbackTimer();
-      window.location.href = TT.safariUrl;
-    }, 350);
+    setTimeout(function () { window.location.href = TT.safariUrl; }, 350);
   } else {
-    showFallback();
-    renderDebug('Previewing the iOS Instagram hand-off screen (no automatic attempt).');
+    renderDebug('Previewing the iOS Instagram screen (no automatic attempt).');
   }
 
   /* ---------- Copy link ---------- */
@@ -323,7 +281,6 @@
       'debug: ' + TT.debug + '\n' +
       'showHandoff: ' + TT.showHandoff + '\n\n' +
       'userAgent:\n' + TT.ua;
-    // keep the debug box inside the layout on small screens
     el.style.maxWidth = '420px';
     el.style.width = '100%';
   }
